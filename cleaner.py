@@ -5,11 +5,10 @@ quotes = []
 
 with open("cleaned.json", 'r') as infile:
     data = json.load(infile)
-    most = 0
     for quote in data:
-        length = len(quote['quoteText'])
-        if length <= 100:
+        length = len(quote['text'])
+        if length >= 80 and length <= 130:
             quotes.append(quote)
     
-with open("final.json", 'w') as outfile:
+with open("final3.json", 'w') as outfile:
     json.dump(quotes, outfile)

@@ -9,8 +9,8 @@ from cipher import *
 
 pygame.init()
 
-SCREEN_WIDTH = 1600
-SCREEN_HEIGHT = 1000
+SCREEN_WIDTH = 1920
+SCREEN_HEIGHT = 1080
 
 CYAN = (20, 118, 133)
 DARK_BLUE = (50, 86, 168)
@@ -29,7 +29,7 @@ MOVE_LEFT = False
 mixer.music.load("pandora.ogg")
 mixer.music.set_volume(0.25)
 
-screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.FULLSCREEN)
 clock = pygame.time.Clock()
 
 big_font = pygame.font.Font("dotumche.ttf", 72)
@@ -163,7 +163,7 @@ class Question:
         self.ANSWER_Y_FACTOR = 0.4
         self.FONT_SPACING = 24
         self.LINE_SPACING = 0.1
-        self.LIMIT = 67
+        self.LIMIT = 1000
 
         prev_index = 0
         num_chars = 0
@@ -309,6 +309,8 @@ while running:
             running = False
         
         if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                running = False
             if event.key == pygame.K_SPACE:
                 if room == "start" and not settings.toggling_number:
                     questions = generate_questions(settings.get_misc_setting("number_of_questions"))
