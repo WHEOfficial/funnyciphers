@@ -26,19 +26,19 @@ WHITE = (255, 255, 255)
 MOVE_RIGHT = True
 MOVE_LEFT = False
 
-mixer.music.load("pandora.ogg")
+mixer.music.load("data/pandora.ogg")
 mixer.music.set_volume(0.25)
 
-screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.FULLSCREEN)
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 clock = pygame.time.Clock()
 
-big_font = pygame.font.Font("dotumche.ttf", 72)
-title_font = pygame.font.Font("dotumche.ttf", 48)
-emp_font = pygame.font.Font("dotumche.ttf", 32)
-normal_font = pygame.font.Font("dotumche.ttf", 20)
+big_font = pygame.font.Font("data/dotumche.ttf", 72)
+title_font = pygame.font.Font("data/dotumche.ttf", 48)
+emp_font = pygame.font.Font("data/dotumche.ttf", 32)
+normal_font = pygame.font.Font("data/dotumche.ttf", 20)
 
 json_data = None
-with open("cleaned.json", 'r') as infile:
+with open("data/cleaned.json", 'r') as infile:
     json_data = json.load(infile)
 
 background_color = CYAN
