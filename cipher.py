@@ -68,13 +68,3 @@ def caesar_encrypt(text, shift=3):
             encrpyted += c
     
     return encrpyted
-
-def clean_text(text, with_space=True):
-    text = text.upper()
-    cleaned = ""
-    for c in text:
-        o = ord(c)
-        if o in LETTER_RANGE or (o == 32 and with_space):
-            cleaned += c
-    
-    return cleaned

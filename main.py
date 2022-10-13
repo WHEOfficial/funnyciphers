@@ -163,7 +163,7 @@ class Question:
         self.ANSWER_Y_FACTOR = 0.4
         self.FONT_SPACING = 24
         self.LINE_SPACING = 0.1
-        self.LIMIT = 1000
+        self.LIMIT = round(SCREEN_WIDTH / self.FONT_SPACING)
 
         prev_index = 0
         num_chars = 0
@@ -293,8 +293,8 @@ def generate_questions(number):
     min_len, max_len = settings.get_misc_setting("min_ciphertext_length"), settings.get_misc_setting("max_ciphertext_length")
     for i in range(number):
         question = Question("Look at this funny caesar text. Decrypt it.", get_random_quote(min_len, max_len)['quoteText'], caesar_encrypt, 180, shift=random.randint(1, 25))
-        # thing = "HELLO EVERYBODY MY NAME IS MARKIPLIER AND TODAY WE WILL BE PLAYING FIVE NIGHTS AT FREDDYS NOW I KNOW THIS GAME IS SCARY FREDDY DO BE CREEPIN ME OUT THO"
-        # question = Question("Look at this funny caesar text. Decrypt it.", thing, caesar_encrypt, 60)
+        thing = "HELLO EVERYBODY MY NAME IS MARKIPLIER AND TODAY WE WILL BE PLAYING FIVE NIGHTS AT FREDDYS NOW I KNOW THIS GAME IS SCARY FREDDY DO BE CREEPIN ME OUT THO"
+        question = Question("Look at this funny caesar text. Decrypt it.", thing, caesar_encrypt, 60)
         questions.append(question)
     return questions
 
