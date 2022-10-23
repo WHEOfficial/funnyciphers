@@ -1,6 +1,7 @@
 LETTER_MIN = 65
 LETTER_MAX = 90
 LETTER_RANGE = range(LETTER_MIN, LETTER_MAX + 1)
+LETTER_LIST = [chr(c) for c in LETTER_RANGE]
 
 NUMBER_MIN = 48
 NUMBER_MAX = 57
@@ -53,6 +54,14 @@ def chi_squared(text):
         chi_squared_value += (diff*diff) / expected
     
     return chi_squared_value
+
+def count_letters(text):
+    counts = {}
+    for c in text:
+        if ord(c) in LETTER_RANGE:
+            counts[c] = counts.get(c, 0) + 1
+    
+    return counts
 
 def caesar_encrypt(text, shift=3):
     text = text.upper()

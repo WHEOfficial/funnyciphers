@@ -151,18 +151,21 @@ class Question:
         self.time_left = time_to_answer
 
         self.ciphertext = cipher(text, **kwargs)
+        self.counts = count_letters(self.ciphertext)
+        self.discovered = {}
         self.words = self.ciphertext.split(" ")
         self.cursor_pos = 0
         self.word_groups = []
-        self.answer = [" " for i in range(len(self.ciphertext))]
+        self.answer = [c if not c.isalpha() else " " for c in self.ciphertext]
 
-        self.spaces = []
+        self.punctuation = []
 
         self.START_X = 5
         self.START_Y_FACTOR = 0.35
         self.ANSWER_Y_FACTOR = 0.4
         self.FONT_SPACING = 24
         self.LINE_SPACING = 0.1
+        self.FREQ_SPACING = 60
         self.LIMIT = round(SCREEN_WIDTH / self.FONT_SPACING)
 
         prev_index = 0
@@ -175,10 +178,9 @@ class Question:
             else:
                 num_chars += len(word) + 1
         self.word_groups.append([self.ciphertext[prev_index:], range(prev_index, len(self.ciphertext))])
-
         for i, c in enumerate(self.ciphertext):
-            if c == " ":
-                self.spaces.append(i)
+            if not c.isalpha():
+                self.punctuation.append(i)
     
     def get_group(self, index):
         for i, group in enumerate(self.word_groups):
@@ -187,7 +189,7 @@ class Question:
     
     def is_full(self):
         for i, c in enumerate(self.answer):
-            if c == " " and i not in self.spaces:
+            if c == " " and i not in self.punctuation:
                 return False
         return True
     
@@ -214,7 +216,7 @@ class Question:
     def update_cursor(self, mode):
         factor = 1 if mode else -1
         next = wrap(self.cursor_pos + factor, 0, len(self.ciphertext) - 1)
-        while self.ciphertext[next] == " ":
+        while not self.ciphertext[next].isalpha():
             next = wrap(next + factor, 0, len(self.ciphertext) - 1)
         self.cursor_pos = next
     
@@ -228,11 +230,23 @@ class Question:
     
     def update_answer(self, c):
         self.answer[self.cursor_pos] = c
+        replace_c = self.ciphertext[self.cursor_pos]
+        self.discovered[replace_c] = c
         if settings.get_misc_setting("autofill"):
-            replace_c = self.ciphertext[self.cursor_pos]
+            
             for i, old_c in enumerate(self.ciphertext):
                 if old_c == replace_c:
                     self.answer[i] = c
+    
+    def render_freqs(self):
+        start = (SCREEN_WIDTH / 2) - (len(LETTER_LIST) - 1) * (self.FREQ_SPACING / 2)
+        for i, c in enumerate(LETTER_LIST):
+            offset = start + self.FREQ_SPACING * i
+            render_text(c, emp_font, x=offset, y=SCREEN_HEIGHT - 200, offset=2)
+            if c in self.counts.keys():
+                render_text(str(self.counts[c]), emp_font, x=offset, y=SCREEN_HEIGHT - 150, offset=2)
+            if c in self.discovered.keys():
+                render_text(self.discovered[c], emp_font, x=offset, y=SCREEN_HEIGHT - 100, c1=BLACK, c2=WHITE, offset=1)
     
     def submit(self):
         if self.is_full():
@@ -248,6 +262,8 @@ class Question:
         self.render_ciphertext()
         self.render_cursor()
         self.render_answer()
+
+        self.render_freqs()
 
         if self.is_full():
             render_text("Press Enter to submit.", emp_font, y=SCREEN_HEIGHT - 50, offset=2)
@@ -293,7 +309,7 @@ def generate_questions(number):
     min_len, max_len = settings.get_misc_setting("min_ciphertext_length"), settings.get_misc_setting("max_ciphertext_length")
     for i in range(number):
         question = Question("Look at this funny caesar text. Decrypt it.", get_random_quote(min_len, max_len)['quoteText'], caesar_encrypt, 180, shift=random.randint(1, 25))
-        thing = "HELLO EVERYBODY MY NAME IS MARKIPLIER AND TODAY WE WILL BE PLAYING FIVE NIGHTS AT FREDDYS NOW I KNOW THIS GAME IS SCARY FREDDY DO BE CREEPIN ME OUT THO"
+        thing = "HELLO EVERYBODY, MY NAME IS MARKIPLIER, AND TODAY WE WILL BE PLAYING FIVE NIGHTS AT FREDDY'S. NOW I KNOW THIS GAME IS SCARY, FREDDY DO BE CREEPIN ME OUT THO!"
         question = Question("Look at this funny caesar text. Decrypt it.", thing, caesar_encrypt, 60)
         questions.append(question)
     return questions
@@ -327,12 +343,15 @@ while running:
                         timer = 0
                         seconds = 0
                         room = "question"
+                elif room == "game":
+                    question.update_cursor(MOVE_RIGHT)
             if event.key == pygame.K_RETURN:
                 if room == "start":
                     settings.toggle_setting()
                 elif room == "game":
                     right = question.submit()
-                    room = "right" if right else "wrong"
+                    if right is not None:
+                        room = "right" if right else "wrong"
             if event.key == pygame.K_RIGHT:
                 if room == "game":
                     question.update_cursor(MOVE_RIGHT)
@@ -373,15 +392,17 @@ while running:
     
     keys = pygame.key.get_pressed()
     if room == "game":
-        if keys[pygame.K_RIGHT]:
+        if keys[pygame.K_RIGHT] or keys[pygame.K_SPACE]:
             if right_pressed > 0.5:
                 question.update_cursor(MOVE_RIGHT)
             right_pressed += dt / 1000
         else:
             right_pressed = 0
-        if keys[pygame.K_LEFT]:
+        if keys[pygame.K_LEFT] or keys[pygame.K_BACKSPACE]:
             if left_pressed > 0.5:
                 question.update_cursor(MOVE_LEFT)
+                if keys[pygame.K_BACKSPACE]:
+                    question.update_answer(" ")
             left_pressed += dt / 1000
         else:
             left_pressed = 0
