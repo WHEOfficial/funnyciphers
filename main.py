@@ -43,7 +43,6 @@ with open("data/cleaned.json", 'r') as infile:
 
 background_color = CYAN
 
-room = "start"
 question = "Look at this funny caesar text. Decrypt it."
 
 timer = 0
@@ -54,6 +53,11 @@ left_pressed = 0
 questions = []
 current_question = 0
 question = None
+
+class Game:
+    def __init__(self):
+        self.room = "start"
+        self.questions = []
 
 class Settings:
     def __init__(self) -> None:
@@ -148,6 +152,8 @@ class Question:
         self.cipher = cipher
         self.time_to_answer = time_to_answer
 
+        self.game = game
+
         self.time_left = time_to_answer
 
         self.ciphertext = cipher(text, **kwargs)
@@ -195,6 +201,8 @@ class Question:
     
     def render_timer(self):
         self.time_left = self.time_to_answer - seconds
+        if self.time_left <= 0:
+            self.game.room = "time"
         pygame.draw.rect(screen, DARK_BLUE, pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT / 5))
         render_text(str(math.floor(clamp(self.time_left, 0, self.time_to_answer - 1))), big_font, y=SCREEN_HEIGHT / 10)
         pygame.draw.rect(screen, WHITE, pygame.Rect(0, SCREEN_HEIGHT / 5, SCREEN_WIDTH * self.time_left / self.time_to_answer, 5))
@@ -310,10 +318,11 @@ def generate_questions(number):
     for i in range(number):
         question = Question("Look at this funny caesar text. Decrypt it.", get_random_quote(min_len, max_len)['quoteText'], caesar_encrypt, 180, shift=random.randint(1, 25))
         thing = "HELLO EVERYBODY, MY NAME IS MARKIPLIER, AND TODAY WE WILL BE PLAYING FIVE NIGHTS AT FREDDY'S. NOW I KNOW THIS GAME IS SCARY, FREDDY DO BE CREEPIN ME OUT THO!"
-        question = Question("Look at this funny caesar text. Decrypt it.", thing, caesar_encrypt, 60)
+        question = Question("Look at this funny caesar text. Decrypt it.", thing, caesar_encrypt, 5)
         questions.append(question)
     return questions
 
+game = Game()
 running = True
 while running:
     dt = clock.tick(60)
@@ -328,62 +337,62 @@ while running:
             if event.key == pygame.K_ESCAPE:
                 running = False
             if event.key == pygame.K_SPACE:
-                if room == "start" and not settings.toggling_number:
+                if game.room == "start" and not settings.toggling_number:
                     questions = generate_questions(settings.get_misc_setting("number_of_questions"))
                     mixer.music.play(-1)
                     timer = 0
                     seconds = 0
-                    room = "countdown"
-                elif room == "right" or room == "wrong":
+                    game.room = "countdown"
+                elif game.room == "right" or game.room == "wrong" or game.room == "time":
                     background_color = CYAN
                     current_question += 1
                     if current_question >= len(questions):
-                        room = "end"
+                        game.room = "end"
                     else:
                         timer = 0
                         seconds = 0
-                        room = "question"
-                elif room == "game":
+                        game.room = "question"
+                elif game.room == "game":
                     question.update_cursor(MOVE_RIGHT)
             if event.key == pygame.K_RETURN:
-                if room == "start":
+                if game.room == "start":
                     settings.toggle_setting()
-                elif room == "game":
+                elif game.room == "game":
                     right = question.submit()
                     if right is not None:
-                        room = "right" if right else "wrong"
+                        game.room = "right" if right else "wrong"
             if event.key == pygame.K_RIGHT:
-                if room == "game":
+                if game.room == "game":
                     question.update_cursor(MOVE_RIGHT)
-                elif room == "start":
+                elif game.room == "start":
                     settings.update_cursor(MOVE_RIGHT, True)
             if event.key == pygame.K_LEFT:
-                if room == "game":
+                if game.room == "game":
                     question.update_cursor(MOVE_LEFT)
-                elif room == "start":
+                elif game.room == "start":
                     settings.update_cursor(MOVE_LEFT, True)
             if event.key == pygame.K_DOWN:
-                if room == "start":
+                if game.room == "start":
                     settings.update_cursor(MOVE_RIGHT)
             if event.key == pygame.K_UP:
-                if room == "start":
+                if game.room == "start":
                     settings.update_cursor(MOVE_LEFT)
             if event.key == pygame.K_BACKSPACE or event.key == pygame.K_DELETE:
-                if room == "game":
+                if game.room == "game":
                     question.update_answer(" ")
                     if event.key == pygame.K_BACKSPACE:
                         question.update_cursor(MOVE_LEFT)
-                if room == "start":
+                if game.room == "start":
                     settings.number = settings.number[:-1]
             
             try:
                 c = event.unicode.upper()
                 if ord(c) in LETTER_RANGE:
-                    if room == "game":
+                    if game.room == "game":
                         question.update_answer(c)
                         question.update_cursor(MOVE_RIGHT)
                 elif ord(c) in NUMBER_RANGE:
-                    if room == "start" and settings.toggling_number:
+                    if game.room == "start" and settings.toggling_number:
                         if settings.number != "" or ord(c) != NUMBER_MIN:
                             settings.number += c
 
@@ -391,7 +400,7 @@ while running:
                 pass
     
     keys = pygame.key.get_pressed()
-    if room == "game":
+    if game.room == "game":
         if keys[pygame.K_RIGHT] or keys[pygame.K_SPACE]:
             if right_pressed > 0.5:
                 question.update_cursor(MOVE_RIGHT)
@@ -407,7 +416,7 @@ while running:
         else:
             left_pressed = 0
     
-    if room == "countdown":
+    if game.room == "countdown":
         if seconds < 0.3:
             background_color = BG_RED
         elif seconds < 0.6:
@@ -420,44 +429,49 @@ while running:
             background_color = CYAN
             timer = 0
             seconds = 0
-            room = "question"
-    elif room == "question":
+            game.room = "question"
+    elif game.room == "question":
         if seconds > 1:
             question = questions[current_question]
             timer = 0
             seconds = 0
-            room = "game"
-    elif room == "right":
+            game.room = "game"
+    elif game.room == "right":
         background_color = BG_GREEN
-    elif room == "wrong":
+    elif game.room == "wrong" or game.room == "time":
         background_color = BG_RED
 
     screen.fill(background_color)
 
-    if room == "start":
+    if game.room == "start":
         render_text("FUNNY CIHPERS", title_font, y=50)
         render_text("A very fun epic tool for cipher funny!!!", normal_font, y=100, offset=2)
 
         settings.update()
 
         render_text("PRESS SPACE TO BEGIN", emp_font, y=SCREEN_HEIGHT - 50, offset=2)
-    elif room == "countdown":
+    elif game.room == "countdown":
         countdown(seconds)
-    elif room == "game":
+    elif game.room == "game":
         question.update()
-    elif room == "right":
+    elif game.room == "right":
         render_text("Good job!", title_font, y=50)
         render_text("You answered correctly!", normal_font, y=100, offset=2)
         render_text("(you don't need to see the right answer again)", emp_font, offset=2)
         render_text("PRESS SPACE TO CONTINUE", emp_font, y=SCREEN_HEIGHT - 50, offset=2)
-    elif room == "wrong":
+    elif game.room == "wrong":
         render_text("Bad job!", title_font, y=50)
         render_text("You answered incorrectly! Correct answer below:", normal_font, y=100, offset=2)
         render_text(question.text, normal_font, offset=2)
         render_text("PRESS SPACE TO CONTINUE", emp_font, y=SCREEN_HEIGHT - 50, offset=2)
-    elif room == "question":
+    elif game.room == "time":
+        render_text("Bad job!", title_font, y=50)
+        render_text("You ran out of time.", normal_font, y=100, offset=2)
+        render_text("(to make you love me)", normal_font, offset=2)
+        render_text("PRESS SPACE TO CONTINUE", emp_font, y=SCREEN_HEIGHT - 50, offset=2)
+    elif game.room == "question":
         render_text(f"Question {current_question + 1}", big_font)
-    elif room == "end":
+    elif game.room == "end":
         render_text(f"More coming soon", big_font)
     
     pygame.display.flip()
