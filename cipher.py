@@ -1,3 +1,6 @@
+import math
+import random
+
 LETTER_MIN = 65
 LETTER_MAX = 90
 LETTER_RANGE = range(LETTER_MIN, LETTER_MAX + 1)
@@ -36,6 +39,8 @@ FREQUENCIES = {
     'Z': 0.0009,
 }
 
+MONOALPHABETIC = []
+
 def chi_squared(text):
     text_freqs = {}
 
@@ -73,6 +78,44 @@ def caesar_encrypt(text, shift=3):
             new_pos = (pos + shift) % 26
             new_c = chr(new_pos + LETTER_MIN)
             encrpyted += new_c
+        else:
+            encrpyted += c
+    
+    return encrpyted
+
+def porta_encrypt(text, key):
+    text, key = text.upper(), key.upper()
+    encrpyted = ""
+    i = 0
+    for c in text:
+        o = ord(c)
+        if o in LETTER_RANGE:
+            # thank you toebes for giving me nice code so i don't have to write 
+            # out the alphabet manually
+            text_value = o - LETTER_MIN
+            key_value = ord(key[i % len(key)]) - LETTER_MIN
+            cipher_value = 0
+            if text_value < 13:
+                cipher_value = ((math.floor(key_value / 2) + text_value) % 13) + 13
+            else:
+                cipher_value = (13 - math.floor(key_value / 2) + text_value) % 13
+            encrpyted += chr(cipher_value + LETTER_MIN)
+            i += 1
+        else:
+            encrpyted += c
+    return encrpyted
+
+def aristocrat(text, alphabet=None, key=None):
+    text = text.upper()
+    encrpyted = ""
+    cipher_alphabet = LETTER_LIST.copy()
+    while any([LETTER_LIST[i] == cipher_alphabet[i] for i in range(len(LETTER_LIST))]):
+        random.shuffle(cipher_alphabet)
+
+    for c in text:
+        o = ord(c)
+        if o in LETTER_RANGE:
+            encrpyted += cipher_alphabet[o - LETTER_MIN]
         else:
             encrpyted += c
     

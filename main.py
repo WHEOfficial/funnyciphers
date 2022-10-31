@@ -62,7 +62,7 @@ class Game:
 class Settings:
     def __init__(self) -> None:
         self.cipher_settings = {
-            "caesar": True,
+            "porta": True,
         }
 
         self.misc_settings = {
@@ -239,12 +239,12 @@ class Question:
     def update_answer(self, c):
         self.answer[self.cursor_pos] = c
         replace_c = self.ciphertext[self.cursor_pos]
-        self.discovered[replace_c] = c
-        if settings.get_misc_setting("autofill"):
-            
-            for i, old_c in enumerate(self.ciphertext):
-                if old_c == replace_c:
-                    self.answer[i] = c
+        if self.cipher in MONOALPHABETIC:
+            self.discovered[replace_c] = c
+            if settings.get_misc_setting("autofill"):
+                for i, old_c in enumerate(self.ciphertext):
+                    if old_c == replace_c:
+                        self.answer[i] = c
     
     def render_freqs(self):
         start = (SCREEN_WIDTH / 2) - (len(LETTER_LIST) - 1) * (self.FREQ_SPACING / 2)
@@ -253,7 +253,7 @@ class Question:
             render_text(c, emp_font, x=offset, y=SCREEN_HEIGHT - 200, offset=2)
             if c in self.counts.keys():
                 render_text(str(self.counts[c]), emp_font, x=offset, y=SCREEN_HEIGHT - 150, offset=2)
-            if c in self.discovered.keys():
+            if c in self.discovered.keys() and self.cipher in MONOALPHABETIC:
                 render_text(self.discovered[c], emp_font, x=offset, y=SCREEN_HEIGHT - 100, c1=BLACK, c2=WHITE, offset=1)
     
     def submit(self):
@@ -318,7 +318,7 @@ def generate_questions(number):
     for i in range(number):
         question = Question("Look at this funny caesar text. Decrypt it.", get_random_quote(min_len, max_len)['quoteText'], caesar_encrypt, 180, shift=random.randint(1, 25))
         thing = "HELLO EVERYBODY, MY NAME IS MARKIPLIER, AND TODAY WE WILL BE PLAYING FIVE NIGHTS AT FREDDY'S. NOW I KNOW THIS GAME IS SCARY, FREDDY DO BE CREEPIN ME OUT THO!"
-        question = Question("Look at this funny caesar text. Decrypt it.", thing, caesar_encrypt, 5)
+        question = Question("Look at this funny caesar text. Decrypt it.", thing, porta_encrypt, 60, key="MARKIPLIER")
         questions.append(question)
     return questions
 
