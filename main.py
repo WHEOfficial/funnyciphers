@@ -379,9 +379,9 @@ while running:
                     settings.update_cursor(MOVE_LEFT)
             if event.key == pygame.K_BACKSPACE or event.key == pygame.K_DELETE:
                 if game.room == "game":
-                    question.update_answer(" ")
                     if event.key == pygame.K_BACKSPACE:
                         question.update_cursor(MOVE_LEFT)
+                    question.update_answer(" ")
                 if game.room == "start":
                     settings.number = settings.number[:-1]
             

@@ -1,5 +1,6 @@
 import math
 import random
+import re
 
 LETTER_MIN = 65
 LETTER_MAX = 90
@@ -40,6 +41,9 @@ FREQUENCIES = {
 }
 
 MONOALPHABETIC = []
+
+def rotate(l, n):
+    return l[n:] + l[:n]
 
 def chi_squared(text):
     text_freqs = {}
@@ -105,18 +109,39 @@ def porta_encrypt(text, key):
             encrpyted += c
     return encrpyted
 
-def aristocrat(text, alphabet=None, key=None):
+def aristocrat(text, alphabet="RANDOM", pat=False, key=None, offset=1):
     text = text.upper()
+    if pat:
+        text = re.sub(r'[^A-Z]', '', text)
+        text = " ".join([text[i:i+5] for i in range(0, len(text), 5)])
+        print(text)
+
     encrpyted = ""
-    cipher_alphabet = LETTER_LIST.copy()
-    while any([LETTER_LIST[i] == cipher_alphabet[i] for i in range(len(LETTER_LIST))]):
-        random.shuffle(cipher_alphabet)
+    normal_alphabet = LETTER_LIST.copy()
+    cipher_alphabet = []
+    
+    if alphabet == "RANDOM":
+        cipher_alphabet = LETTER_LIST.copy()
+        while any([LETTER_LIST[i] == cipher_alphabet[i] for i in range(len(LETTER_LIST))]):
+            random.shuffle(cipher_alphabet)
+    else:
+        used_letters = LETTER_LIST.copy()
+        for c in key:
+            if c in used_letters:
+                cipher_alphabet.append(used_letters.pop(used_letters.index(c)))
+        
+        cipher_alphabet = rotate(cipher_alphabet + used_letters, -offset)
+    
+    if alphabet == "K1":
+        normal_alphabet, cipher_alphabet = cipher_alphabet, normal_alphabet
 
     for c in text:
         o = ord(c)
         if o in LETTER_RANGE:
-            encrpyted += cipher_alphabet[o - LETTER_MIN]
+            encrpyted += cipher_alphabet[normal_alphabet.index(c)]
         else:
             encrpyted += c
     
     return encrpyted
+
+print(aristocrat("THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG", "K1", key="COLD WEATHER", offset=2, pat=True))
