@@ -2,6 +2,8 @@ import math
 import random
 import re
 
+import numpy as np
+
 LETTER_MIN = 65
 LETTER_MAX = 90
 LETTER_RANGE = range(LETTER_MIN, LETTER_MAX + 1)
@@ -71,6 +73,9 @@ def count_letters(text):
             counts[c] = counts.get(c, 0) + 1
     
     return counts
+
+def clean(text):
+    return re.sub(r'[^A-Z]', '', text.upper())
 
 def caesar_encrypt(text, shift=3):
     text = text.upper()
@@ -144,4 +149,24 @@ def aristocrat(text, alphabet="RANDOM", pat=False, key=None, offset=1):
     
     return encrpyted
 
-print(aristocrat("THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG", "K1", key="COLD WEATHER", offset=2, pat=True))
+def hill(text, key):
+    text, key = clean(text), key.upper()
+    mat_key = [ord(c) - LETTER_MIN for c in key]
+    mat_key = np.reshape(mat_key, (2, 2))
+    
+    encrpyted = ""
+    if len(text) % 2 != 0:
+        text += 'Z'
+
+    for i in range(0, len(text), 2):
+        mat_text = np.reshape([ord(c) - LETTER_MIN for c in text[i:i+2]], (2, 1))
+        mat_text = (np.matmul(mat_key, mat_text) % len(LETTER_LIST)).flatten()
+        for c in mat_text:
+            print(c)
+            encrpyted += chr(c + LETTER_MIN)
+
+    return encrpyted
+
+
+#print(aristocrat("THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG", "K1", key="COLD WEATHER", offset=2, pat=True))
+print(hill('SCIENCE OLYMPIAD', 'HILL'))
