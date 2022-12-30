@@ -42,6 +42,37 @@ FREQUENCIES = {
     'Z': 0.0009,
 }
 
+MORSE = {
+    'A': '.-',
+    'B': '-...',
+    'C': '-.-.',
+    'D': '-..',
+    'E': '.',
+    'F': '..-.',
+    'G': '--.',
+    'H': '....',
+    'I': '..',
+    'J': '.---',
+    'K': '-.-',
+    'L': '.-..',
+    'M': '--',
+    'N': '-.',
+    'O': '---',
+    'P': '.--.',
+    'Q': '--.-',
+    'R': '.-.',
+    'S': '...',
+    'T': '-',
+    'U': '..-',
+    'V': '...-',
+    'W': '.--',
+    'X': '-..-',
+    'Y': '-.--',
+    'Z': '--..',
+}
+
+permutations = [f + s for f in '.-x' for s in '.-x']
+
 MONOALPHABETIC = []
 
 def rotate(l, n):
@@ -74,8 +105,9 @@ def count_letters(text):
     
     return counts
 
-def clean(text):
-    return re.sub(r'[^A-Z]', '', text.upper())
+def clean(text, with_space=False):
+    pattern = r'[^A-Z ]' if with_space else r'[^A-Z]'
+    return re.sub(pattern, '', text.upper())
 
 def caesar_encrypt(text, shift=3):
     text = text.upper()
@@ -117,9 +149,8 @@ def porta_encrypt(text, key):
 def aristocrat(text, alphabet="RANDOM", pat=False, key=None, offset=1):
     text = text.upper()
     if pat:
-        text = re.sub(r'[^A-Z]', '', text)
+        text = clean(text)
         text = " ".join([text[i:i+5] for i in range(0, len(text), 5)])
-        print(text)
 
     encrpyted = ""
     normal_alphabet = LETTER_LIST.copy()
@@ -167,6 +198,46 @@ def hill(text, key):
 
     return encrpyted
 
+def morse(text):
+    text = clean(text, True)
+    encrypted = ""
+
+    for c in text:
+        if c != ' ':
+            encrypted += MORSE[c]
+            encrypted += 'x'
+        else:
+            encrypted += 'x'
+    
+    return encrypted[:-1]
+
+def pollux(morsept, dots=[1,2,3], dashes=[4,5,6], spaces=[7,8,9,0]):
+    encrypted = ""
+
+    morse_map = {
+        '.': dots,
+        '-': dashes,
+        'x': spaces
+    }
+
+    for c in morsept:
+        encrypted += str(random.choice(morse_map[c]))
+    
+    return encrypted
+
+def morbit(morsept, perm=permutations.copy()):
+    encrypted = ""
+
+    if len(morsept) % 2 != 0:
+        morsept += 'x'
+
+    for i in range(0, len(morsept), 2):
+        encrypted += str(perm.index(morsept[i:i+2]) + 1)
+    
+    return encrypted
 
 #print(aristocrat("THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG", "K1", key="COLD WEATHER", offset=2, pat=True))
-print(hill('SCIENCE OLYMPIAD', 'HILL'))
+
+random_perm = permutations.copy()
+random.shuffle(random_perm)
+print(morbit(morse("THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG")))
