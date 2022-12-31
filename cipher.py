@@ -71,7 +71,38 @@ MORSE = {
     'Z': '--..',
 }
 
-permutations = [f + s for f in '.-x' for s in '.-x']
+BACON = {
+    'A': 'AAAAA',
+    'B': 'AAAAB',
+    'C': 'AAABA',
+    'D': 'AAABB',
+    'E': 'AABAA',
+    'F': 'AABAB',
+    'G': 'AABBA',
+    'H': 'AABBB',
+    'I': 'ABAAA',
+    'J': 'ABAAA',
+    'K': 'ABAAB',
+    'L': 'ABABA',
+    'M': 'ABABB',
+    'N': 'ABBAA',
+    'O': 'ABBAB',
+    'P': 'ABBBA',
+    'Q': 'ABBBB',
+    'R': 'BAAAA',
+    'S': 'BAAAB',
+    'T': 'BAABA',
+    'U': 'BAABB',
+    'V': 'BAABB',
+    'W': 'BABAA',
+    'X': 'BABAB',
+    'Y': 'BABBA',
+    'Z': 'BABBB',
+}
+
+MORSE_CHARS = '.-x'
+PERMUTATIONS_MORBIT = [f + s for f in MORSE_CHARS for s in MORSE_CHARS]
+PERMUTATIONS_FRAC = [f + s for f in PERMUTATIONS_MORBIT for s in MORSE_CHARS][:-1]
 
 MONOALPHABETIC = []
 
@@ -108,6 +139,16 @@ def count_letters(text):
 def clean(text, with_space=False):
     pattern = r'[^A-Z ]' if with_space else r'[^A-Z]'
     return re.sub(pattern, '', text.upper())
+
+def generate_alphabet(key, offset=0):
+    cipher_alphabet = []
+    used_letters = LETTER_LIST.copy()
+    for c in key:
+        if c in used_letters:
+            cipher_alphabet.append(used_letters.pop(used_letters.index(c)))
+    
+    cipher_alphabet = rotate(cipher_alphabet + used_letters, -offset)
+    return cipher_alphabet
 
 def caesar_encrypt(text, shift=3):
     text = text.upper()
@@ -146,7 +187,7 @@ def porta_encrypt(text, key):
             encrpyted += c
     return encrpyted
 
-def aristocrat(text, alphabet="RANDOM", pat=False, key=None, offset=1):
+def aristocrat(text, alphabet="RANDOM", pat=False, key=None, offset=0):
     text = text.upper()
     if pat:
         text = clean(text)
@@ -161,13 +202,8 @@ def aristocrat(text, alphabet="RANDOM", pat=False, key=None, offset=1):
         while any([LETTER_LIST[i] == cipher_alphabet[i] for i in range(len(LETTER_LIST))]):
             random.shuffle(cipher_alphabet)
     else:
-        used_letters = LETTER_LIST.copy()
-        for c in key:
-            if c in used_letters:
-                cipher_alphabet.append(used_letters.pop(used_letters.index(c)))
-        
-        cipher_alphabet = rotate(cipher_alphabet + used_letters, -offset)
-    
+        cipher_alphabet = generate_alphabet(key, offset)
+
     if alphabet == "K1":
         normal_alphabet, cipher_alphabet = cipher_alphabet, normal_alphabet
 
@@ -225,7 +261,7 @@ def pollux(morsept, dots=[1,2,3], dashes=[4,5,6], spaces=[7,8,9,0]):
     
     return encrypted
 
-def morbit(morsept, perm=permutations.copy()):
+def morbit(morsept, perm=PERMUTATIONS_MORBIT.copy()):
     encrypted = ""
 
     if len(morsept) % 2 != 0:
@@ -236,8 +272,55 @@ def morbit(morsept, perm=permutations.copy()):
     
     return encrypted
 
+def fractionated_morse(morsept, key=None):
+    encrypted = ""
+    alphabet = generate_alphabet(key)
+
+    if (m := len(morsept) % 3) != 0:
+        morsept += 'x' if m == 2 else 'xx'
+    
+    for i in range(0, len(morsept), 3):
+        index = PERMUTATIONS_FRAC.index(morsept[i:i+3])
+        encrypted += alphabet[index]
+
+    return encrypted
+
+def rail_fence(text, rails, offset=0):
+    text = [*clean(text)]
+
+    offset %= rails * 2 - 2
+    print(offset)
+
+    rail_lists = [[] for _ in range(rails)]
+    current_rail = 0
+    step = 1
+
+    while text:
+        if offset > 0:
+            offset -= 1
+        else:
+            rail_lists[current_rail].append(text.pop(0))
+        current_rail += step
+        if current_rail == 0 or current_rail == rails - 1:
+            step = -step
+
+    return ''.join([''.join(l) for l in rail_lists])
+
+def bacon(text, a=['A'], b=['B']):
+    encrypted = []
+    text = clean(text)
+
+    for c in text:
+        bacon_slice = BACON[c]
+        bacon_str = ""
+        for ab in bacon_slice:
+            l = a if ab == 'A' else b
+            bacon_str += str(random.choice(l))
+
+        encrypted.append(bacon_str)
+    
+    return ' '.join(encrypted)
+
 #print(aristocrat("THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG", "K1", key="COLD WEATHER", offset=2, pat=True))
 
-random_perm = permutations.copy()
-random.shuffle(random_perm)
-print(morbit(morse("THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG")))
+print(bacon("THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG", [1,3,5,7,9], [2,4,6,8,0]))
