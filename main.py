@@ -149,6 +149,7 @@ class Question:
     def __init__(self, question, text, cipher, time_to_answer, **kwargs):
         self.question = question
         self.text = text
+        self.cleaned_text = clean(text)
         self.cipher = cipher
         self.time_to_answer = time_to_answer
 
@@ -225,6 +226,9 @@ class Question:
                 return i, (index % group[1].stop) - group[1].start
     
     def is_full(self):
+        if self.IS_FREE_RESPONSE: 
+            return ''.join(self.answer) != ''
+
         for i, c in enumerate(self.answer):
             if c == "" and i not in self.punctuation:
                 return False
@@ -304,7 +308,7 @@ class Question:
     
     def submit(self):
         if self.is_full():
-            return "".join(self.answer) == self.text
+            return clean("".join(self.answer)) == self.cleaned_text
 
     def update(self):
         self.render_timer()
@@ -366,7 +370,7 @@ def generate_questions(number):
         #question = Question("Look at this funny caesar text. Decrypt it.", get_random_quote(min_len, max_len)['quoteText'], caesar_encrypt, 180, shift=random.randint(1, 25))
         thing = "HELLO EVERYBODY, MY NAME IS MARKIPLIER, AND TODAY WE WILL BE PLAYING FIVE NIGHTS AT FREDDY'S. NOW I KNOW THIS GAME IS SCARY, FREDDY DO BE CREEPIN ME OUT THO!"
         the = "THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG"
-        question = Question("Look at this funny text. Decrypt it.", the, pollux, 60)
+        question = Question("Look at this funny text. Decrypt it.", the, aristocrat, 60, alphabet='K1', key="COLDWEATHER", offset=1)
         questions.append(question)
     return questions
 

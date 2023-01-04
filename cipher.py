@@ -322,7 +322,7 @@ def bacon(text, a=['A'], b=['B']):
     
     return ' '.join(encrypted)
 
-MONOALPHABETIC = []
+MONOALPHABETIC = [aristocrat]
 BREAKUP = [morbit, pollux, fractionated_morse]
 FREE_RESPONSE = BREAKUP + [bacon]
 
