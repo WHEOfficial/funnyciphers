@@ -156,34 +156,57 @@ class Question:
 
         self.time_left = time_to_answer
 
+        self.IS_FREE_RESPONSE = self.cipher in FREE_RESPONSE
+
         self.ciphertext = cipher(text, **kwargs)
         self.counts = count_letters(self.ciphertext)
         self.discovered = {}
-        self.words = self.ciphertext.split(" ")
         self.cursor_pos = 0
-        self.word_groups = []
-        self.answer = [c if not c.isalpha() else " " for c in self.ciphertext]
+        self.answer = ['']
+        if not self.IS_FREE_RESPONSE:
+            self.answer = [c if not c.isalpha() else "" for c in self.ciphertext]
 
         self.punctuation = []
 
         self.START_X = 5
         self.START_Y_FACTOR = 0.35
-        self.ANSWER_Y_FACTOR = 0.4
+        self.ANSWER_Y_FACTOR = 0.4 if not self.IS_FREE_RESPONSE else 0.6
         self.FONT_SPACING = 24
-        self.LINE_SPACING = 0.1
+        self.LINE_SPACING = 0.1 if not self.IS_FREE_RESPONSE else 0.05
         self.FREQ_SPACING = 60
-        self.LIMIT = round(SCREEN_WIDTH / self.FONT_SPACING)
+        self.LIMIT = round(SCREEN_WIDTH / self.FONT_SPACING) - 1
+
+        if self.cipher in BREAKUP and len(self.ciphertext) > self.LIMIT:
+            broken_string = ""
+            i = 0
+            while i * self.LIMIT < len(self.ciphertext):
+                broken_string += self.ciphertext[i:i+self.LIMIT] + ' '
+                i += self.LIMIT
+            
+            broken_string += self.ciphertext[i:len(self.ciphertext)]
+            self.ciphertext = broken_string
+
+        self.calculate_ranges()
+        self.get_punctuation()
+    
+    def calculate_ranges(self):
+        self.word_groups = []
+        self.words = self.ciphertext.split(" ")
 
         prev_index = 0
         num_chars = 0
         for word in self.words:
             if num_chars + len(word) + 1 > self.LIMIT:
+                if num_chars == 0:
+                    num_chars = len(word) + 1
                 self.word_groups.append([self.ciphertext[prev_index:num_chars+prev_index], range(prev_index, num_chars+prev_index)])
-                prev_index = num_chars+prev_index
+                prev_index = num_chars + prev_index
                 num_chars = len(word) + 1
             else:
                 num_chars += len(word) + 1
         self.word_groups.append([self.ciphertext[prev_index:], range(prev_index, len(self.ciphertext))])
+    
+    def get_punctuation(self):
         for i, c in enumerate(self.ciphertext):
             if not c.isalpha():
                 self.punctuation.append(i)
@@ -195,7 +218,7 @@ class Question:
     
     def is_full(self):
         for i, c in enumerate(self.answer):
-            if c == " " and i not in self.punctuation:
+            if c == "" and i not in self.punctuation:
                 return False
         return True
     
@@ -223,28 +246,40 @@ class Question:
     
     def update_cursor(self, mode):
         factor = 1 if mode else -1
-        next = wrap(self.cursor_pos + factor, 0, len(self.ciphertext) - 1)
-        while not self.ciphertext[next].isalpha():
-            next = wrap(next + factor, 0, len(self.ciphertext) - 1)
-        self.cursor_pos = next
+
+        if self.IS_FREE_RESPONSE:
+            self.cursor_pos = wrap(self.cursor_pos + factor, 0, len(self.answer) - 1)
+        else:
+            next = wrap(self.cursor_pos + factor, 0, len(self.ciphertext) - 1)
+            while not self.ciphertext[next].isalpha():
+                next = wrap(next + factor, 0, len(self.ciphertext) - 1)
+            self.cursor_pos = next
     
     def render_answer(self):
         for i, c in enumerate(self.answer):
             group, pos = self.get_group(i)
             x = self.START_X + (pos * self.FONT_SPACING)
             y = self.ANSWER_Y_FACTOR + (group * self.LINE_SPACING)
-            if c != " ":
+            if c != " " and c != "":
                 render_text(c, emp_font, x=x, y=SCREEN_HEIGHT * y, centered=False, c1=BLACK, c2=WHITE, offset=1)
     
     def update_answer(self, c):
-        self.answer[self.cursor_pos] = c
-        replace_c = self.ciphertext[self.cursor_pos]
-        if self.cipher in MONOALPHABETIC:
-            self.discovered[replace_c] = c
-            if settings.get_misc_setting("autofill"):
-                for i, old_c in enumerate(self.ciphertext):
-                    if old_c == replace_c:
-                        self.answer[i] = c
+        if not self.IS_FREE_RESPONSE:
+            self.answer[self.cursor_pos] = c
+            replace_c = self.ciphertext[self.cursor_pos]
+            if self.cipher in MONOALPHABETIC:
+                self.discovered[replace_c] = c
+                if settings.get_misc_setting("autofill"):
+                    for i, old_c in enumerate(self.ciphertext):
+                        if old_c == replace_c:
+                            self.answer[i] = c
+        else:
+            if self.cursor_pos == len(self.answer) - 1:
+                self.answer.insert(len(self.answer) - 1, c)
+            else:
+                self.answer[self.cursor_pos] = c
+                if c == "":
+                    del self.answer[self.cursor_pos]
     
     def render_freqs(self):
         start = (SCREEN_WIDTH / 2) - (len(LETTER_LIST) - 1) * (self.FREQ_SPACING / 2)
@@ -253,7 +288,7 @@ class Question:
             render_text(c, emp_font, x=offset, y=SCREEN_HEIGHT - 200, offset=2)
             if c in self.counts.keys():
                 render_text(str(self.counts[c]), emp_font, x=offset, y=SCREEN_HEIGHT - 150, offset=2)
-            if c in self.discovered.keys() and self.cipher in MONOALPHABETIC:
+            if c in self.discovered.keys():
                 render_text(self.discovered[c], emp_font, x=offset, y=SCREEN_HEIGHT - 100, c1=BLACK, c2=WHITE, offset=1)
     
     def submit(self):
@@ -271,7 +306,8 @@ class Question:
         self.render_cursor()
         self.render_answer()
 
-        self.render_freqs()
+        if self.cipher in MONOALPHABETIC:
+            self.render_freqs()
 
         if self.is_full():
             render_text("Press Enter to submit.", emp_font, y=SCREEN_HEIGHT - 50, offset=2)
@@ -315,10 +351,11 @@ def get_random_quote(min_len, max_len):
 def generate_questions(number):
     questions = []
     min_len, max_len = settings.get_misc_setting("min_ciphertext_length"), settings.get_misc_setting("max_ciphertext_length")
-    for i in range(number):
-        question = Question("Look at this funny caesar text. Decrypt it.", get_random_quote(min_len, max_len)['quoteText'], caesar_encrypt, 180, shift=random.randint(1, 25))
+    for _ in range(number):
+        #question = Question("Look at this funny caesar text. Decrypt it.", get_random_quote(min_len, max_len)['quoteText'], caesar_encrypt, 180, shift=random.randint(1, 25))
         thing = "HELLO EVERYBODY, MY NAME IS MARKIPLIER, AND TODAY WE WILL BE PLAYING FIVE NIGHTS AT FREDDY'S. NOW I KNOW THIS GAME IS SCARY, FREDDY DO BE CREEPIN ME OUT THO!"
-        question = Question("Look at this funny caesar text. Decrypt it.", thing, porta_encrypt, 60, key="MARKIPLIER")
+        the = "THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG"
+        question = Question("Look at this funny text. Decrypt it.", the, pollux, 60)
         questions.append(question)
     return questions
 
@@ -353,6 +390,7 @@ while running:
                         seconds = 0
                         game.room = "question"
                 elif game.room == "game":
+                    question.update_answer(" ")
                     question.update_cursor(MOVE_RIGHT)
             if event.key == pygame.K_RETURN:
                 if game.room == "start":
@@ -381,7 +419,7 @@ while running:
                 if game.room == "game":
                     if event.key == pygame.K_BACKSPACE:
                         question.update_cursor(MOVE_LEFT)
-                    question.update_answer(" ")
+                    question.update_answer("")
                 if game.room == "start":
                     settings.number = settings.number[:-1]
             
@@ -411,7 +449,7 @@ while running:
             if left_pressed > 0.5:
                 question.update_cursor(MOVE_LEFT)
                 if keys[pygame.K_BACKSPACE]:
-                    question.update_answer(" ")
+                    question.update_answer("")
             left_pressed += dt / 1000
         else:
             left_pressed = 0

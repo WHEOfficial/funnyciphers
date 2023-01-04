@@ -104,8 +104,6 @@ MORSE_CHARS = '.-x'
 PERMUTATIONS_MORBIT = [f + s for f in MORSE_CHARS for s in MORSE_CHARS]
 PERMUTATIONS_FRAC = [f + s for f in PERMUTATIONS_MORBIT for s in MORSE_CHARS][:-1]
 
-MONOALPHABETIC = []
-
 def rotate(l, n):
     return l[n:] + l[:n]
 
@@ -165,7 +163,7 @@ def caesar_encrypt(text, shift=3):
     
     return encrpyted
 
-def porta_encrypt(text, key):
+def porta(text, key):
     text, key = text.upper(), key.upper()
     encrpyted = ""
     i = 0
@@ -247,7 +245,8 @@ def morse(text):
     
     return encrypted[:-1]
 
-def pollux(morsept, dots=[1,2,3], dashes=[4,5,6], spaces=[7,8,9,0]):
+def pollux(text, dots=[1,2,3], dashes=[4,5,6], spaces=[7,8,9,0]):
+    morsept = morse(text)
     encrypted = ""
 
     morse_map = {
@@ -261,7 +260,8 @@ def pollux(morsept, dots=[1,2,3], dashes=[4,5,6], spaces=[7,8,9,0]):
     
     return encrypted
 
-def morbit(morsept, perm=PERMUTATIONS_MORBIT.copy()):
+def morbit(text, perm=PERMUTATIONS_MORBIT.copy()):
+    morsept = morse(text)
     encrypted = ""
 
     if len(morsept) % 2 != 0:
@@ -272,7 +272,8 @@ def morbit(morsept, perm=PERMUTATIONS_MORBIT.copy()):
     
     return encrypted
 
-def fractionated_morse(morsept, key=None):
+def fractionated_morse(text, key=None):
+    morsept = morse(text)
     encrypted = ""
     alphabet = generate_alphabet(key)
 
@@ -321,6 +322,10 @@ def bacon(text, a=['A'], b=['B']):
     
     return ' '.join(encrypted)
 
+MONOALPHABETIC = []
+BREAKUP = [morbit, pollux, fractionated_morse]
+FREE_RESPONSE = BREAKUP + [bacon]
+
 #print(aristocrat("THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG", "K1", key="COLD WEATHER", offset=2, pat=True))
 
-print(bacon("THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG", [1,3,5,7,9], [2,4,6,8,0]))
+#print(bacon("THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG", [1,3,5,7,9], [2,4,6,8,0]))
