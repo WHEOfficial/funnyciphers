@@ -165,8 +165,9 @@ class Question:
         self.answer = ['']
         if not self.IS_FREE_RESPONSE:
             self.answer = [c if not c.isalpha() else "" for c in self.ciphertext]
-
         self.punctuation = []
+        self.word_groups = []
+        self.answer_groups = []
 
         self.START_X = 5
         self.START_Y_FACTOR = 0.35
@@ -186,33 +187,40 @@ class Question:
             broken_string += self.ciphertext[i:len(self.ciphertext)]
             self.ciphertext = broken_string
 
-        self.calculate_ranges()
+        self.calculate_ranges(self.ciphertext, self.word_groups)
+        if self.IS_FREE_RESPONSE:
+            self.calculate_ranges(''.join(self.answer), self.answer_groups)
         self.get_punctuation()
     
-    def calculate_ranges(self):
-        self.word_groups = []
-        self.words = self.ciphertext.split(" ")
+    def calculate_ranges(self, text, groups):
+        groups.clear()
+
+        if text == "":
+            groups.append(['', range(0, 1)])
+            return
+
+        words = text.split(" ")
 
         prev_index = 0
         num_chars = 0
-        for word in self.words:
+        for word in words:
             if num_chars + len(word) + 1 > self.LIMIT:
                 if num_chars == 0:
                     num_chars = len(word) + 1
-                self.word_groups.append([self.ciphertext[prev_index:num_chars+prev_index], range(prev_index, num_chars+prev_index)])
+                groups.append([self.ciphertext[prev_index:num_chars+prev_index], range(prev_index, num_chars+prev_index)])
                 prev_index = num_chars + prev_index
                 num_chars = len(word) + 1
             else:
                 num_chars += len(word) + 1
-        self.word_groups.append([self.ciphertext[prev_index:], range(prev_index, len(self.ciphertext))])
+        groups.append([self.ciphertext[prev_index:], range(prev_index, len(self.ciphertext))])
     
     def get_punctuation(self):
         for i, c in enumerate(self.ciphertext):
             if not c.isalpha():
                 self.punctuation.append(i)
     
-    def get_group(self, index):
-        for i, group in enumerate(self.word_groups):
+    def get_group(self, index, groups):
+        for i, group in enumerate(groups):
             if index in group[1]:
                 return i, (index % group[1].stop) - group[1].start
     
@@ -232,14 +240,15 @@ class Question:
     
     def render_ciphertext(self):
         for i, c in enumerate(self.ciphertext):
-            group, pos = self.get_group(i)
+            group, pos = self.get_group(i, self.word_groups)
             x = self.START_X + (pos * self.FONT_SPACING)
             y = self.START_Y_FACTOR + (group * self.LINE_SPACING)
             if c != " ":
                 render_text(c, emp_font, x=x, y=SCREEN_HEIGHT * y, centered=False, offset=2)
     
     def render_cursor(self):
-        group, pos = self.get_group(self.cursor_pos)
+        g = self.word_groups if not self.IS_FREE_RESPONSE else self.answer_groups
+        group, pos = self.get_group(self.cursor_pos, g)
         x = self.START_X + (pos * self.FONT_SPACING)
         y = self.ANSWER_Y_FACTOR + (group * self.LINE_SPACING)
         pygame.draw.rect(screen, WHITE, pygame.Rect(x + 1, SCREEN_HEIGHT * y, self.FONT_SPACING - 1, 40))
@@ -257,7 +266,8 @@ class Question:
     
     def render_answer(self):
         for i, c in enumerate(self.answer):
-            group, pos = self.get_group(i)
+            g = self.word_groups if not self.IS_FREE_RESPONSE else self.answer_groups
+            group, pos = self.get_group(i, g)
             x = self.START_X + (pos * self.FONT_SPACING)
             y = self.ANSWER_Y_FACTOR + (group * self.LINE_SPACING)
             if c != " " and c != "":
@@ -280,6 +290,7 @@ class Question:
                 self.answer[self.cursor_pos] = c
                 if c == "":
                     del self.answer[self.cursor_pos]
+            self.calculate_ranges(''.join(self.answer), self.answer_groups)
     
     def render_freqs(self):
         start = (SCREEN_WIDTH / 2) - (len(LETTER_LIST) - 1) * (self.FREQ_SPACING / 2)
