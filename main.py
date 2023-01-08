@@ -62,13 +62,29 @@ class Game:
 class Settings:
     def __init__(self) -> None:
         self.cipher_settings = {
+            "random_aristocrat": True,
+            "aristocrat_k1": True,
+            "aristocrat_k2": True,
+            "patristocrat_k1": True,
+            "patristocrat_k2": True,
             "porta": True,
+            "hill_2x2": True,
+            "pollux": True,
+            "morbit": True,
+            "fractionated_morse": True,
+            "rail_fence": True,
+            "bacon": True,
+            "enable_all": None,
+            "disable_all": None
         }
 
         self.misc_settings = {
-            "number_of_questions": 10,
+            "number_of_questions": 20,
             "min_ciphertext_length": 20,
             "max_ciphertext_length": 100,
+            "min_chi-squared_value": 0,
+            "max_chi-squared_value": 40,
+            "max_free_response_length": 40,
             "autofill": True,
         }
 
@@ -120,15 +136,25 @@ class Settings:
             else:
                 self.current_settings[self.current_setting] = int(self.number)
                 self.toggling_number = False
-    
+        elif self.current_settings[self.current_setting] is None:
+            for k, v in self.cipher_settings.items():
+                    if v is not None:
+                        self.cipher_settings[k] = self.current_setting == "enable_all"
+                
     def update(self):
         render_text("CIPHER SETTINGS", emp_font, x=SCREEN_WIDTH / 3, y = SCREEN_HEIGHT / 5, offset=2)
         y_factor = 0.25
         for k, v in self.cipher_settings.items():
-            s = f"{k.title().replace('_', ' ')}: {v}"
+            s = ""
+            c1 = WHITE
+            if v is None:
+                s = f"{k.upper().replace('_', ' ')}"
+                c1 = BG_YELLOW
+            else:
+                s = f"{k.title().replace('_', ' ')}: {v}"
             if self.cursor_setting == "cipher" and self.current_setting == k:
                     s = "> " + s
-            render_text(s, normal_font, x=SCREEN_WIDTH / 3, y = SCREEN_HEIGHT * y_factor, offset=2)
+            render_text(s, normal_font, x=SCREEN_WIDTH / 3, y = SCREEN_HEIGHT * y_factor, offset=2, c1=c1)
             y_factor += self.LINE_SPACING
 
         render_text("MISC SETTINGS", emp_font, x=SCREEN_WIDTH * (2/3), y = SCREEN_HEIGHT / 5, offset=2)
@@ -160,6 +186,8 @@ class Question:
         self.IS_FREE_RESPONSE = self.cipher in FREE_RESPONSE
 
         self.ciphertext = cipher(text, **kwargs)
+        if self.cipher == aristocrat:
+            self.ciphertext, self.alphabet = self.ciphertext
         self.counts = count_letters(self.ciphertext)
         self.discovered = {}
         self.cursor_pos = 0
@@ -282,7 +310,10 @@ class Question:
             self.answer[self.cursor_pos] = c
             replace_c = self.ciphertext[self.cursor_pos]
             if self.cipher in MONOALPHABETIC:
-                self.discovered[replace_c] = c
+                if self.alphabet == "K2":
+                    self.discovered[c] = replace_c
+                else:
+                    self.discovered[replace_c] = c
                 if settings.get_misc_setting("autofill"):
                     for i, old_c in enumerate(self.ciphertext):
                         if old_c == replace_c:
@@ -370,7 +401,7 @@ def generate_questions(number):
         #question = Question("Look at this funny caesar text. Decrypt it.", get_random_quote(min_len, max_len)['quoteText'], caesar_encrypt, 180, shift=random.randint(1, 25))
         thing = "HELLO EVERYBODY, MY NAME IS MARKIPLIER, AND TODAY WE WILL BE PLAYING FIVE NIGHTS AT FREDDY'S. NOW I KNOW THIS GAME IS SCARY, FREDDY DO BE CREEPIN ME OUT THO!"
         the = "THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG"
-        question = Question("Look at this funny text. Decrypt it.", the, aristocrat, 60, alphabet='K1', key="COLDWEATHER", offset=1)
+        question = Question("Look at this funny text. Decrypt it.", the, aristocrat, 60, alphabet='K2', key="COLDWEATHER", offset=1)
         questions.append(question)
     return questions
 
@@ -389,7 +420,9 @@ while running:
             if event.key == pygame.K_ESCAPE:
                 running = False
             if event.key == pygame.K_SPACE:
-                if game.room == "start" and not settings.toggling_number:
+                if game.room == "start" and not settings.toggling_number and \
+                    any([v for v in settings.cipher_settings.values()]) and \
+                    not settings.misc_settings["number_of_questions"] < sum([bool(b) for b in settings.cipher_settings.values()]):
                     questions = generate_questions(settings.get_misc_setting("number_of_questions"))
                     mixer.music.play(-1)
                     timer = 0
@@ -501,6 +534,11 @@ while running:
         render_text("A very fun epic tool for cipher funny!!!", normal_font, y=100, offset=2)
 
         settings.update()
+
+        if not any([v for v in settings.cipher_settings.values()]):
+            render_text("At least one cipher must be enabled.", emp_font, y=SCREEN_HEIGHT - 100, offset=2, c1=BG_RED)
+        elif settings.misc_settings["number_of_questions"] < sum([bool(b) for b in settings.cipher_settings.values()]):
+            render_text("Number of questions must be at least the number of ciphers enabled.", emp_font, y=SCREEN_HEIGHT - 100, offset=2, c1=BG_RED)
 
         render_text("PRESS SPACE TO BEGIN", emp_font, y=SCREEN_HEIGHT - 50, offset=2)
     elif game.room == "countdown":

@@ -212,7 +212,7 @@ def aristocrat(text, alphabet="RANDOM", pat=False, key=None, offset=0):
         else:
             encrpyted += c
     
-    return encrpyted
+    return encrpyted, alphabet
 
 def hill(text, key):
     text, key = clean(text), key.upper()
