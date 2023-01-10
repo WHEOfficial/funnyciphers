@@ -329,3 +329,20 @@ FREE_RESPONSE = BREAKUP + [bacon]
 #print(aristocrat("THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG", "K1", key="COLD WEATHER", offset=2, pat=True))
 
 #print(bacon("THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG", [1,3,5,7,9], [2,4,6,8,0]))
+
+def random_arisocrat(min, max):
+    with open('data/ten_thousand.txt') as infile:
+        lines = infile.read().splitlines()
+        choice = ""
+        while len(choice) < min or len(choice) > max:
+            choice = random.choice(lines)
+    
+    alphabet = LETTER_LIST.copy()
+    offset = 0
+    while any([LETTER_LIST[i] == alphabet[i] for i in range(len(LETTER_LIST))]):
+        offset = random.randint(0, 25)
+        alphabet = generate_alphabet(choice.upper(), offset)
+    
+    return alphabet, offset
+
+print(random_arisocrat(7, 9))

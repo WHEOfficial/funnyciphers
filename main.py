@@ -397,11 +397,21 @@ def get_random_quote(min_len, max_len):
 def generate_questions(number):
     questions = []
     min_len, max_len = settings.get_misc_setting("min_ciphertext_length"), settings.get_misc_setting("max_ciphertext_length")
-    for _ in range(number):
+    valid_ciphers = [k for k, v in settings.cipher_settings.items() if v]
+    cipher_list, vc_copy = [], valid_ciphers.copy()
+    
+    for i in range(number):
+        if len(valid_ciphers) == 0:
+            valid_ciphers = vc_copy
+        cipher_list.append(valid_ciphers.pop(random.randrange(0, len(valid_ciphers))))
+    
+    print(cipher_list)
+
+    for i in range(number):
         #question = Question("Look at this funny caesar text. Decrypt it.", get_random_quote(min_len, max_len)['quoteText'], caesar_encrypt, 180, shift=random.randint(1, 25))
         thing = "HELLO EVERYBODY, MY NAME IS MARKIPLIER, AND TODAY WE WILL BE PLAYING FIVE NIGHTS AT FREDDY'S. NOW I KNOW THIS GAME IS SCARY, FREDDY DO BE CREEPIN ME OUT THO!"
-        the = "THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG"
-        question = Question("Look at this funny text. Decrypt it.", the, aristocrat, 60, alphabet='K2', key="COLDWEATHER", offset=1)
+        the = "T"
+        question = Question(cipher_list[i], the, aristocrat, 60, alphabet='K2', key="COLDWEATHER", offset=1)
         questions.append(question)
     return questions
 
@@ -422,7 +432,7 @@ while running:
             if event.key == pygame.K_SPACE:
                 if game.room == "start" and not settings.toggling_number and \
                     any([v for v in settings.cipher_settings.values()]) and \
-                    not settings.misc_settings["number_of_questions"] < sum([bool(b) for b in settings.cipher_settings.values()]):
+                    not settings.get_misc_setting("number_of_questions") < sum([bool(b) for b in settings.cipher_settings.values()]):
                     questions = generate_questions(settings.get_misc_setting("number_of_questions"))
                     mixer.music.play(-1)
                     timer = 0
@@ -537,7 +547,7 @@ while running:
 
         if not any([v for v in settings.cipher_settings.values()]):
             render_text("At least one cipher must be enabled.", emp_font, y=SCREEN_HEIGHT - 100, offset=2, c1=BG_RED)
-        elif settings.misc_settings["number_of_questions"] < sum([bool(b) for b in settings.cipher_settings.values()]):
+        elif settings.get_misc_setting("number_of_questions") < sum([bool(b) for b in settings.cipher_settings.values()]):
             render_text("Number of questions must be at least the number of ciphers enabled.", emp_font, y=SCREEN_HEIGHT - 100, offset=2, c1=BG_RED)
 
         render_text("PRESS SPACE TO BEGIN", emp_font, y=SCREEN_HEIGHT - 50, offset=2)
