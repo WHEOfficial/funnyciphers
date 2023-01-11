@@ -80,6 +80,7 @@ class Settings:
 
         self.misc_settings = {
             "number_of_questions": 20,
+            "time_per_question": 60,
             "min_ciphertext_length": 20,
             "max_ciphertext_length": 100,
             "min_chi-squared_value": 0,
@@ -178,6 +179,9 @@ class Question:
         self.cleaned_text = clean(text)
         self.cipher = cipher
         self.time_to_answer = time_to_answer
+
+        if self.cipher == hill and len(self.cleaned_text) % 2 == 1:
+            self.cleaned_text += 'Z'
 
         self.game = game
 
@@ -307,11 +311,16 @@ class Question:
     
     def update_answer(self, c):
         if not self.IS_FREE_RESPONSE:
+            prev_char = self.answer[self.cursor_pos]
             self.answer[self.cursor_pos] = c
             replace_c = self.ciphertext[self.cursor_pos]
+            #print([i for i in self.discovered if self.discovered[i]==replace_c])
             if self.cipher in MONOALPHABETIC:
                 if self.alphabet == "K2":
-                    self.discovered[c] = replace_c
+                    if c == '':
+                        self.discovered[prev_char] = c
+                    else:
+                        self.discovered[c] = replace_c
                 else:
                     self.discovered[replace_c] = c
                 if settings.get_misc_setting("autofill"):
@@ -396,23 +405,23 @@ def get_random_quote(min_len, max_len):
 
 def generate_questions(number):
     questions = []
-    min_len, max_len = settings.get_misc_setting("min_ciphertext_length"), settings.get_misc_setting("max_ciphertext_length")
+    min_len, max_len, time_per = \
+        settings.get_misc_setting("min_ciphertext_length"), \
+        settings.get_misc_setting("max_ciphertext_length"), \
+        settings.get_misc_setting("time_per_question")
     valid_ciphers = [k for k, v in settings.cipher_settings.items() if v]
     cipher_list, vc_copy = [], valid_ciphers.copy()
     
     for i in range(number):
         if len(valid_ciphers) == 0:
-            valid_ciphers = vc_copy
-        cipher_list.append(valid_ciphers.pop(random.randrange(0, len(valid_ciphers))))
-    
-    print(cipher_list)
-
-    for i in range(number):
-        #question = Question("Look at this funny caesar text. Decrypt it.", get_random_quote(min_len, max_len)['quoteText'], caesar_encrypt, 180, shift=random.randint(1, 25))
-        thing = "HELLO EVERYBODY, MY NAME IS MARKIPLIER, AND TODAY WE WILL BE PLAYING FIVE NIGHTS AT FREDDY'S. NOW I KNOW THIS GAME IS SCARY, FREDDY DO BE CREEPIN ME OUT THO!"
-        the = "T"
-        question = Question(cipher_list[i], the, aristocrat, 60, alphabet='K2', key="COLDWEATHER", offset=1)
+            valid_ciphers = vc_copy.copy()
+        cipher = valid_ciphers.pop(random.randrange(0, len(valid_ciphers)))
+        keywords = KEYWORD_FUNCS[cipher]()
+        hints = HINTS[cipher](keywords)
+        cipher_func = NAME_TO_CIPHER[cipher]
+        question = Question(hints, PANGRAM, cipher_func, time_per, **keywords)
         questions.append(question)
+    
     return questions
 
 game = Game()

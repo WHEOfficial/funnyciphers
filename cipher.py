@@ -104,6 +104,11 @@ MORSE_CHARS = '.-x'
 PERMUTATIONS_MORBIT = [f + s for f in MORSE_CHARS for s in MORSE_CHARS]
 PERMUTATIONS_FRAC = [f + s for f in PERMUTATIONS_MORBIT for s in MORSE_CHARS][:-1]
 
+MIN_KEYWORD = 7
+MAX_KEYWORD = 9
+
+PANGRAM = "THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG"
+
 def rotate(l, n):
     return l[n:] + l[:n]
 
@@ -227,7 +232,6 @@ def hill(text, key):
         mat_text = np.reshape([ord(c) - LETTER_MIN for c in text[i:i+2]], (2, 1))
         mat_text = (np.matmul(mat_key, mat_text) % len(LETTER_LIST)).flatten()
         for c in mat_text:
-            print(c)
             encrpyted += chr(c + LETTER_MIN)
 
     return encrpyted
@@ -290,7 +294,6 @@ def rail_fence(text, rails, offset=0):
     text = [*clean(text)]
 
     offset %= rails * 2 - 2
-    print(offset)
 
     rail_lists = [[] for _ in range(rails)]
     current_rail = 0
@@ -330,19 +333,94 @@ FREE_RESPONSE = BREAKUP + [bacon]
 
 #print(bacon("THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG", [1,3,5,7,9], [2,4,6,8,0]))
 
-def random_arisocrat(min, max):
+def random_word(min, max):
     with open('data/ten_thousand.txt') as infile:
         lines = infile.read().splitlines()
         choice = ""
         while len(choice) < min or len(choice) > max:
             choice = random.choice(lines)
+    return choice.upper()
+
+def random_arisocrat(min, max):
+    word = random_word(min, max)
     
     alphabet = LETTER_LIST.copy()
     offset = 0
     while any([LETTER_LIST[i] == alphabet[i] for i in range(len(LETTER_LIST))]):
         offset = random.randint(0, 25)
-        alphabet = generate_alphabet(choice.upper(), offset)
+        alphabet = generate_alphabet(word, offset)
     
-    return alphabet, offset
+    return {'key': word, 'offset': offset}
 
-print(random_arisocrat(7, 9))
+def random_hill():
+    with open('data/hill2x2.txt') as infile:
+        return random.choice(infile.read().splitlines())
+
+def random_pollux():
+    numbers = [i for i in range(10)]
+
+    selected = [[], [], []]
+    for _ in range(random.randint(3, 4)):
+        selected[0].append(numbers.pop(random.randrange(0, len(numbers))))
+    for _ in range(random.randint(3, 4)):
+        selected[1].append(numbers.pop(random.randrange(0, len(numbers))))
+    while len(numbers) > 0:
+        selected[2].append(numbers.pop(random.randrange(0, len(numbers))))
+    
+    random.shuffle(selected)
+
+    return {'dots': selected[0], 'dashes': selected[1], 'spaces': selected[2]}
+
+def random_morbit():
+    perm_copy = PERMUTATIONS_MORBIT.copy()
+    random.shuffle(perm_copy)
+    return perm_copy
+
+def random_rail_fence():
+    rails = random.randint(2, 6)
+    return {'rails': rails, 'offset': random.randint(0, rails * 2 - 3)}
+
+NAME_TO_CIPHER = {
+    "random_aristocrat": aristocrat,
+    "aristocrat_k1": aristocrat,
+    "aristocrat_k2": aristocrat,
+    "patristocrat_k1": aristocrat,
+    "patristocrat_k2": aristocrat,
+    "porta": porta,
+    "hill_2x2": hill,
+    "pollux": pollux,
+    "morbit": morbit,
+    "fractionated_morse": fractionated_morse,
+    "rail_fence": rail_fence,
+    "bacon": bacon,
+}
+
+KEYWORD_FUNCS = {
+    "random_aristocrat": lambda: {},
+    "aristocrat_k1": lambda: {'alphabet': "K1", **random_arisocrat(MIN_KEYWORD, MAX_KEYWORD)},
+    "aristocrat_k2": lambda: {'alphabet': "K2", **random_arisocrat(MIN_KEYWORD, MAX_KEYWORD)},
+    "patristocrat_k1": lambda: {'alphabet': "K1", 'pat': True, **random_arisocrat(MIN_KEYWORD, MAX_KEYWORD)},
+    "patristocrat_k2": lambda: {'alphabet': "K2", 'pat': True, **random_arisocrat(MIN_KEYWORD, MAX_KEYWORD)},
+    "porta": lambda: {'key': random_word(MIN_KEYWORD, MAX_KEYWORD)},
+    "hill_2x2": lambda: {'key': random_hill()},
+    "pollux": lambda: random_pollux(),
+    "morbit": lambda: {'perm': random_morbit()},
+    "fractionated_morse": lambda: {'key': random_word(MIN_KEYWORD, MAX_KEYWORD)},
+    "rail_fence": lambda: random_rail_fence(),
+    "bacon": lambda: {},
+}
+
+HINTS = {
+    "random_aristocrat": lambda k: "No hints.",
+    "aristocrat_k1": lambda k: "No hints.",
+    "aristocrat_k2": lambda k: "No hints.",
+    "patristocrat_k1": lambda k: "No hints.",
+    "patristocrat_k2": lambda k: "No hints.",
+    "porta": lambda k: f"Keyword is {k['key']}.",
+    "hill_2x2": lambda k: f"Keyword is {k['key']}.",
+    "pollux": lambda k: "No hints.",
+    "morbit": lambda k: "No hints.",
+    "fractionated_morse": lambda k: "No hints.",
+    "rail_fence": lambda k: f"Rail count is {k['rails']}.",
+    "bacon": lambda k: "No hints.",
+}
