@@ -80,7 +80,7 @@ class Settings:
 
         self.misc_settings = {
             "number_of_questions": 20,
-            "time_per_question": 60,
+            "time_per_question": 60 * 5,
             "min_ciphertext_length": 20,
             "max_ciphertext_length": 100,
             "min_chi-squared_value": 0,
@@ -174,6 +174,9 @@ settings = Settings()
 
 class Question:
     def __init__(self, question, text, cipher, time_to_answer, **kwargs):
+        self.kwargs = kwargs
+        print(self.kwargs)
+
         self.question = question
         self.text = text
         self.cleaned_text = clean(text)
@@ -314,7 +317,6 @@ class Question:
             prev_char = self.answer[self.cursor_pos]
             self.answer[self.cursor_pos] = c
             replace_c = self.ciphertext[self.cursor_pos]
-            #print([i for i in self.discovered if self.discovered[i]==replace_c])
             if self.cipher in MONOALPHABETIC:
                 if self.alphabet == "K2":
                     if c == '':
@@ -366,6 +368,9 @@ class Question:
 
         if self.is_full():
             render_text("Press Enter to submit.", emp_font, y=SCREEN_HEIGHT - 50, offset=2)
+    
+    def render_answers(self):
+        render_text(self.text, normal_font, offset=2)
 
 def render_text(text, font, x=SCREEN_WIDTH / 2, y=SCREEN_HEIGHT / 2, centered=True, c1=WHITE, shadow=True, c2=BLACK, offset=4):
     if shadow:
@@ -397,29 +402,37 @@ def clamp(value, min_num, max_num):
 def wrap(value, min_num, max_num):
     return max_num if value < min_num else min_num if value > max_num else value
 
-def get_random_quote(min_len, max_len):
-    quote = random.choice(json_data)
-    while len(quote['quoteText']) < min_len or len(quote['quoteText']) > max_len:
-        quote = random.choice(json_data)
-    return quote
-
 def generate_questions(number):
     questions = []
+    quotes = []
     min_len, max_len, time_per = \
         settings.get_misc_setting("min_ciphertext_length"), \
         settings.get_misc_setting("max_ciphertext_length"), \
         settings.get_misc_setting("time_per_question")
     valid_ciphers = [k for k, v in settings.cipher_settings.items() if v]
-    cipher_list, vc_copy = [], valid_ciphers.copy()
+    vc_copy = valid_ciphers.copy()
     
-    for i in range(number):
+    for _ in range(number):
+        quote = random_quote(min_len, max_len)
+        while quote['content'] in quotes:
+            quote = random_quote(min_len, max_len)
+        
+        quotes.append(quote['content'])
+        plaintext = quote['content']
+
         if len(valid_ciphers) == 0:
             valid_ciphers = vc_copy.copy()
         cipher = valid_ciphers.pop(random.randrange(0, len(valid_ciphers)))
         keywords = KEYWORD_FUNCS[cipher]()
-        hints = HINTS[cipher](keywords)
+
+        if cipher == "fractionated_morse":
+            keywords['used'] = set([*fractionated_morse(plaintext, **keywords)])
+        hints = f"{cipher.title()}. {quote['author']}. " + HINTS[cipher](keywords)
+        if cipher == "fractionated_morse":
+            del keywords['used']
+
         cipher_func = NAME_TO_CIPHER[cipher]
-        question = Question(hints, PANGRAM, cipher_func, time_per, **keywords)
+        question = Question(hints, plaintext, cipher_func, time_per, **keywords)
         questions.append(question)
     
     return questions
@@ -572,7 +585,7 @@ while running:
     elif game.room == "wrong":
         render_text("Bad job!", title_font, y=50)
         render_text("You answered incorrectly! Correct answer below:", normal_font, y=100, offset=2)
-        render_text(question.text, normal_font, offset=2)
+        question.render_answers()
         render_text("PRESS SPACE TO CONTINUE", emp_font, y=SCREEN_HEIGHT - 50, offset=2)
     elif game.room == "time":
         render_text("Bad job!", title_font, y=50)

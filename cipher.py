@@ -1,3 +1,4 @@
+import json
 import math
 import random
 import re
@@ -380,6 +381,56 @@ def random_rail_fence():
     rails = random.randint(2, 6)
     return {'rails': rails, 'offset': random.randint(0, rails * 2 - 3)}
 
+def random_quote(min_length, max_length, chi=None):
+    with open('data/newquotes.json') as infile:
+        quotes = json.load(infile)
+        quote = random.choice(quotes)
+        while quote['length'] < min_length or quote['length'] > max_length:
+            quote = random.choice(quotes)
+    
+    return quote
+
+def pollux_hint(dots, dashes, spaces):
+    pollux_map = {**dots, **dashes, **spaces}
+    pollux_list = list(pollux_map)
+    hint_list = []
+    for _ in range(5):
+        n = pollux_list.pop(random.randrange(0, len(pollux_list)))
+        hint_list.append(f'{n} = {pollux_map[n]}')
+    
+    return ', '.join(hint_list)
+
+def morbit_hint(perm):
+    hint_list = []
+    used_nums = []
+    for _ in range(5):
+        n = -1
+        while True:
+            n = random.randint(0, 8)
+            if n not in used_nums:
+                break
+        hint_list.append(f'{n+1} = {perm[n]}')
+        used_nums.append(n)
+    
+    return ', '.join(hint_list)
+
+def fractionated_morse_hint(key, used):
+    alphabet = generate_alphabet(key)
+    rolled = []
+    hint = []
+
+    for _ in range(4):
+        num = -1
+        while True:
+            num = random.randrange(0, len(alphabet))
+            if num not in rolled and alphabet[num] in used:
+                rolled.append(num)
+                break
+        
+        hint.append(f"{alphabet[num]} = {PERMUTATIONS_FRAC[num]}")
+    
+    return ', '.join(hint)
+
 NAME_TO_CIPHER = {
     "random_aristocrat": aristocrat,
     "aristocrat_k1": aristocrat,
@@ -418,9 +469,13 @@ HINTS = {
     "patristocrat_k2": lambda k: "No hints.",
     "porta": lambda k: f"Keyword is {k['key']}.",
     "hill_2x2": lambda k: f"Keyword is {k['key']}.",
-    "pollux": lambda k: "No hints.",
-    "morbit": lambda k: "No hints.",
-    "fractionated_morse": lambda k: "No hints.",
+    "pollux": lambda k: pollux_hint(
+        {n: '.' for n in k['dots']},
+        {n: '-' for n in k['dashes']},
+        {n: 'x' for n in k['spaces']},
+    ),
+    "morbit": lambda k: morbit_hint(k['perm']),
+    "fractionated_morse": lambda k: fractionated_morse_hint(k['key'], k['used']),
     "rail_fence": lambda k: f"Rail count is {k['rails']}.",
     "bacon": lambda k: "No hints.",
 }
