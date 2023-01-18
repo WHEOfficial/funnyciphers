@@ -2,6 +2,7 @@ import json
 import math
 import random
 import re
+import string
 
 import numpy as np
 
@@ -381,11 +382,12 @@ def random_rail_fence():
     rails = random.randint(2, 6)
     return {'rails': rails, 'offset': random.randint(0, rails * 2 - 3)}
 
-def random_quote(min_length, max_length, chi=None):
+def random_quote(min_length, max_length, min_chi, max_chi):
     with open('data/newquotes.json') as infile:
         quotes = json.load(infile)
         quote = random.choice(quotes)
-        while quote['length'] < min_length or quote['length'] > max_length:
+        while quote['length'] < min_length or quote['length'] > max_length or \
+            quote['chiSquared'] < min_chi or quote['chiSquared'] > max_chi:
             quote = random.choice(quotes)
     
     return quote
@@ -430,6 +432,26 @@ def fractionated_morse_hint(key, used):
         hint.append(f"{alphabet[num]} = {PERMUTATIONS_FRAC[num]}")
     
     return ', '.join(hint)
+
+def aristocrat_hint(text):
+    text = text.translate(str.maketrans('', '', string.punctuation))
+
+    MIN_WORD_LENGTH = 3
+
+    words = text.split(' ')
+    if len(words[0]) <= 5 and len(words[0]) >= MIN_WORD_LENGTH:
+        return f"Starts with {text.split(' ')[0].upper()}."
+    else:
+        selected_length = 100
+        selected_word = ""
+        word_counts = {}
+        for w in words:
+            if len(w) < selected_length and len(w) >= MIN_WORD_LENGTH:
+                selected_word = w
+                selected_length = len(w)
+            word_counts[w] = word_counts.get(w, 0) + 1
+        count = word_counts[selected_word]
+        return f"Contains {selected_word} {count} time{'s' if count > 1 else ''}."
 
 NAME_TO_CIPHER = {
     "random_aristocrat": aristocrat,

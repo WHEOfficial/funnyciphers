@@ -87,6 +87,8 @@ class Settings:
             "max_chi-squared_value": 40,
             "max_free_response_length": 40,
             "autofill": True,
+            "pangram_mode": False,
+            "aristocrat_hint": False,
         }
 
         self.cursor_pos = 0
@@ -175,7 +177,6 @@ settings = Settings()
 class Question:
     def __init__(self, question, text, cipher, time_to_answer, **kwargs):
         self.kwargs = kwargs
-        print(self.kwargs)
 
         self.question = question
         self.text = text
@@ -243,12 +244,12 @@ class Question:
             if num_chars + len(word) + 1 > self.LIMIT:
                 if num_chars == 0:
                     num_chars = len(word) + 1
-                groups.append([self.ciphertext[prev_index:num_chars+prev_index], range(prev_index, num_chars+prev_index)])
+                groups.append([text[prev_index:num_chars+prev_index], range(prev_index, num_chars+prev_index)])
                 prev_index = num_chars + prev_index
                 num_chars = len(word) + 1
             else:
                 num_chars += len(word) + 1
-        groups.append([self.ciphertext[prev_index:], range(prev_index, len(self.ciphertext))])
+        groups.append([text[prev_index:], range(prev_index, len(text) + 1)])
     
     def get_punctuation(self):
         for i, c in enumerate(self.ciphertext):
@@ -369,8 +370,13 @@ class Question:
         if self.is_full():
             render_text("Press Enter to submit.", emp_font, y=SCREEN_HEIGHT - 50, offset=2)
     
-    def render_answers(self):
+    def render_real_answer(self):
         render_text(self.text, normal_font, offset=2)
+
+        i = self.FONT_SPACING
+        for k, v in self.kwargs.items():
+            render_text(f"{k.upper()}: {v}", normal_font, offset=2, y=SCREEN_HEIGHT / 2 + i)
+            i += self.FONT_SPACING
 
 def render_text(text, font, x=SCREEN_WIDTH / 2, y=SCREEN_HEIGHT / 2, centered=True, c1=WHITE, shadow=True, c2=BLACK, offset=4):
     if shadow:
@@ -405,34 +411,58 @@ def wrap(value, min_num, max_num):
 def generate_questions(number):
     questions = []
     quotes = []
-    min_len, max_len, time_per = \
+    min_len, max_len, time_per, pangram, ahint = \
         settings.get_misc_setting("min_ciphertext_length"), \
         settings.get_misc_setting("max_ciphertext_length"), \
-        settings.get_misc_setting("time_per_question")
+        settings.get_misc_setting("time_per_question"), \
+        settings.get_misc_setting("pangram_mode"), \
+        settings.get_misc_setting("aristocrat_hint")
+    min_chi, max_chi = 0, 9999
     valid_ciphers = [k for k, v in settings.cipher_settings.items() if v]
     vc_copy = valid_ciphers.copy()
     
     for _ in range(number):
-        quote = random_quote(min_len, max_len)
-        while quote['content'] in quotes:
-            quote = random_quote(min_len, max_len)
-        
-        quotes.append(quote['content'])
-        plaintext = quote['content']
-
         if len(valid_ciphers) == 0:
             valid_ciphers = vc_copy.copy()
         cipher = valid_ciphers.pop(random.randrange(0, len(valid_ciphers)))
         keywords = KEYWORD_FUNCS[cipher]()
 
+        if NAME_TO_CIPHER[cipher] in FREE_RESPONSE:
+            max_len = settings.get_misc_setting("max_free_response_length")
+        
+        if NAME_TO_CIPHER[cipher] in MONOALPHABETIC:
+            min_chi, max_chi = \
+                settings.get_misc_setting("min_chi-squared_value"), \
+                settings.get_misc_setting("max_chi-squared_value"), \
+
+        quote = random_quote(min_len, max_len, min_chi, max_chi)
+        while quote['content'] in quotes:
+            quote = random_quote(min_len, max_len, min_chi, max_chi)
+        
+        quotes.append(quote['content'])
+        plaintext = quote['content']
+
         if cipher == "fractionated_morse":
             keywords['used'] = set([*fractionated_morse(plaintext, **keywords)])
-        hints = f"{cipher.title()}. {quote['author']}. " + HINTS[cipher](keywords)
+        
+        chi_text = ""
+        if NAME_TO_CIPHER[cipher] in MONOALPHABETIC:
+            chi_text = f"Chi: {quote['chiSquared']}. "
+        
+        hint_str = f"{cipher.title().replace('_', ' ')}. {quote['author']}. {chi_text}" if not pangram else f"{cipher.title().replace('_', ' ')}. "
+
+        hints = hint_str
+
+        if ahint and NAME_TO_CIPHER[cipher] in MONOALPHABETIC and not pangram:
+            hints += aristocrat_hint(plaintext)
+        else:
+            hints += HINTS[cipher](keywords)
+
         if cipher == "fractionated_morse":
             del keywords['used']
 
         cipher_func = NAME_TO_CIPHER[cipher]
-        question = Question(hints, plaintext, cipher_func, time_per, **keywords)
+        question = Question(hints, plaintext if not pangram else PANGRAM, cipher_func, time_per, **keywords)
         questions.append(question)
     
     return questions
@@ -580,17 +610,17 @@ while running:
     elif game.room == "right":
         render_text("Good job!", title_font, y=50)
         render_text("You answered correctly!", normal_font, y=100, offset=2)
-        render_text("(you don't need to see the right answer again)", emp_font, offset=2)
+        question.render_real_answer()
         render_text("PRESS SPACE TO CONTINUE", emp_font, y=SCREEN_HEIGHT - 50, offset=2)
     elif game.room == "wrong":
         render_text("Bad job!", title_font, y=50)
         render_text("You answered incorrectly! Correct answer below:", normal_font, y=100, offset=2)
-        question.render_answers()
+        question.render_real_answer()
         render_text("PRESS SPACE TO CONTINUE", emp_font, y=SCREEN_HEIGHT - 50, offset=2)
     elif game.room == "time":
         render_text("Bad job!", title_font, y=50)
         render_text("You ran out of time.", normal_font, y=100, offset=2)
-        render_text("(to make you love me)", normal_font, offset=2)
+        question.render_real_answer()
         render_text("PRESS SPACE TO CONTINUE", emp_font, y=SCREEN_HEIGHT - 50, offset=2)
     elif game.room == "question":
         render_text(f"Question {current_question + 1}", big_font)
