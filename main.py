@@ -37,10 +37,6 @@ title_font = pygame.font.Font("data/dotumche.ttf", 48)
 emp_font = pygame.font.Font("data/dotumche.ttf", 32)
 normal_font = pygame.font.Font("data/dotumche.ttf", 20)
 
-json_data = None
-with open("data/cleaned.json", 'r') as infile:
-    json_data = json.load(infile)
-
 background_color = CYAN
 
 question = "Look at this funny caesar text. Decrypt it."
