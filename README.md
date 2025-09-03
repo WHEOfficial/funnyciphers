@@ -1,6 +1,6 @@
 # funnyciphers
 
-This was a program that generated random ciphers to help study for the 2022-23 Science Olympiad Codebusters event. My partner and I ended up getting second place in the Varisty division. It was my first experience creating something original with Pygame.
+This was a program that generated random ciphers to help study for the 2022-23 Science Olympiad Codebusters event. My partner and I ended up getting second place in the Varsity division. It was my first experience creating something original with Pygame.
 
 ## Instructions
 You can select the options in the start menu with the arrow keys, and use enter to toggle/change them. Most of the settings are self-explanatory, but here are a few of the weird ones:
@@ -14,4 +14,5 @@ Press space to start. You'll be able to directly type your decryption and press 
 1. Create a Python virtual environment in your repo (`python -m venv venv`)
 2. Activate it (run the appropriate activate file in venv/bin)
 3. Install the requirements (`pip install -r requirements.txt`)
+
 4. Run `python main.py`
